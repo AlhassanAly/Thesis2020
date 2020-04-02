@@ -3,26 +3,25 @@ from networkx.algorithms import node_connectivity
 import matplotlib.pyplot as plt
 import pylab
 import math
-import json
-from myfncs import add_nodes_to   
+import json   
 import random 
 
 
 G = nx.Graph(name = "Cloud-Fog-Network")
 G.add_node("C")
 
+medium_speed = 299792458  # speed of light
 fogs = 3
 fog_range = 0.4
 Edge_devices = 5 
 
-#G.add_edges_from(add_nodes_to("C", fogs, "f"))
+
 for n in range (1,fogs+1):
     G.add_node("f" + str(n))
 
 for n in range (1,Edge_devices+1):
     G.add_node("d" + str(n))
-# we need a loop to automate the creation of fog nodes with fixed positions 
-#that are relative to their range
+
 node_positions = {"C":(0,0.6)}
 node_attrs = {"C":{"MIPS": 5000, "STR": 500000}}
 
@@ -112,28 +111,42 @@ def  add_link_attributes(data_rate_low = 1000, data_rate_high = 10000):
 add_link_attributes()
 nx.set_edge_attributes(G, link_attrs) 
 
-fog_to_devices =[]
 
-#print(G.edges)
+#print(G.edges['C','f1'])
 #print(nx.info(G))
-#print(node_attrs)
+#print(G.nodes)
+print(G.edges)
 canlist = []
-# print(G.edges['C',"F1"])
 for d in G.nodes:
-    if "d" in d:
-        canlist.append(list(G.adj[d]))
-        for candidates in canlist:
-            for value in candidates:
-                if value is not None and [d == edge[1] for edge in G.edges]:
-                    if G.nodes[value]["STR"] >= G.nodes[d]["Size"]:
-                        print(value, G.nodes[value], d, G.nodes[d])
-                        print(value, d)
-                        print(G.edges[str(value), str(d)])
-                    else:
-                        print("shit")    
+    if 'd' in d:
+        candlist = list(G.adj[d])
+        if candlist != None:
+            response_times = {}
+            for candidate in candlist:
+                print(d, candidate, G.nodes[candidate]["STR"], G.nodes[d]["Size"])
+                if G.nodes[candidate]["STR"] >= G.nodes[d]["Size"]:
+                    link_attributes = G.edges[str(candidate), str(d)]
+                    DR = link_attributes['DR']
+                    ser_delay = G.nodes[d]["Size"]/DR
+                    for dis in fog_device_distances:
+                        if candidate == dis[0] and d == dis[1]:
+                            f_e_distance = dis[2]
+                            prop_delay = f_e_distance/ medium_speed
+                            network_latency = prop_delay + ser_delay
+                    processing_time = G.nodes[d]["mINS"] / G.nodes[candidate]["MIPS"]
+                    r_t = processing_time + network_latency
+                    response_times[candidate] = r_t 
+                #else:        
+            print(response_times)
+            if response_times != {}:
+                minimum_RT = min(response_times, key = response_times.get)
+                time = response_times[minimum_RT]
+                print(time, minimum_RT)
+            
 
-print(canlist)
 
+                      
+print("done")                    
 # for n in G.edges:
 #     if "d" in n[1]:
 #       for keys, values in node_attrs.items():
