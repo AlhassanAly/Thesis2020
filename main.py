@@ -11,7 +11,7 @@ G = nx.Graph(name = "Cloud-Fog-Network")
 G.add_node("C")
 
 medium_speed = 299792458  # speed of light
-fogs = 3
+fogs = 5
 fog_range = 0.4
 Edge_devices = 5 
 
@@ -112,19 +112,17 @@ add_link_attributes()
 nx.set_edge_attributes(G, link_attrs) 
 
 
-#print(G.edges['C','f1'])
-#print(nx.info(G))
-#print(G.nodes)
-print(G.edges)
-canlist = []
+candidate_list = []
+cluster_list = []
 for d in G.nodes:
     if 'd' in d:
-        candlist = list(G.adj[d])
-        if candlist != None:
+        candidate_list = list(G.adj[d])
+        print("candidate_list for", d, ":", candidate_list)
+        if candidate_list != None:
             response_times = {}
-            for candidate in candlist:
-                print(d, candidate, G.nodes[candidate]["STR"], G.nodes[d]["Size"])
+            for candidate in candidate_list:
                 if G.nodes[candidate]["STR"] >= G.nodes[d]["Size"]:
+                    print(candidate +" STR:", G.nodes[candidate]["STR"], d + " Size:", G.nodes[d]["Size"], " Valid capacity")
                     link_attributes = G.edges[str(candidate), str(d)]
                     DR = link_attributes['DR']
                     ser_delay = G.nodes[d]["Size"]/DR
@@ -135,13 +133,21 @@ for d in G.nodes:
                             network_latency = prop_delay + ser_delay
                     processing_time = G.nodes[d]["mINS"] / G.nodes[candidate]["MIPS"]
                     r_t = processing_time + network_latency
-                    response_times[candidate] = r_t 
-                #else:        
-            print(response_times)
+                    response_times[candidate] = r_t
+                    print("response times for",d, ":", response_times) 
+                elif G.nodes[candidate]["STR"] < G.nodes[d]["Size"]:
+                    print(candidate +" STR:", G.nodes[candidate]["STR"], d + " Size:", G.nodes[d]["Size"], " Invalid capacity")
+                    for candidate2 in candidate_list:
+                        if G.nodes[candidate]["STR"] + G.nodes[candidate2]["STR"]  >= G.nodes[d]["Size"]:
+                            if candidate != candidate2 and (candidate2, candidate) not in cluster_list:
+                                cluster_list = ((candidate, candidate2))
+            if cluster_list != []:
+                print("cluster list for", d, ":" , cluster_list) 
+                    
             if response_times != {}:
                 minimum_RT = min(response_times, key = response_times.get)
                 time = response_times[minimum_RT]
-                print(time, minimum_RT)
+                print("Minimum response time for",d, ":", minimum_RT, time)
             
 
 
