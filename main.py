@@ -11,7 +11,7 @@ G = nx.Graph(name = "Cloud-Fog-Network")
 G.add_node("C")
 
 medium_speed = 299792458  # speed of light
-fogs = 10
+fogs = 3
 fog_range = 0.4
 Edge_devices = 5 
 
@@ -26,14 +26,14 @@ for n in range (1,Edge_devices+1):
     G.add_node("d" + str(n))
 
 node_positions = {"C":(0,0.6)}
-node_attrs = {"C":{"MIPS": 5000, "STR": 500000}}
+node_attrs = {"C":{"MIPS": 5000, "RAM": 500000}}
 
 
 def place_fogs(x1 = -0.7,x2 = 0.7 ,y1 = -0.3, y2 = 0.1, mips_low = 200, mips_high=900, 
-str_low = 512, str_high = 2048):
+ram_low = 512, ram_high = 4096):
     for number in range (1,fogs+1):
         positions = {"f" + str(number):(random.uniform(x1,x2),random.uniform(y1, y2))}
-        attributes = {"f" + str(number):{"MIPS":random.randint(mips_low,mips_high),"STR":random.randint(str_low, str_high)}}
+        attributes = {"f" + str(number):{"MIPS":random.randint(mips_low,mips_high),"RAM":random.randint(ram_low, ram_high)}}
         fog_list.append("f" + str(number))
         node_positions.update(positions)
         node_attrs.update(attributes)
@@ -46,13 +46,13 @@ fnode_pos, fog_list, attributes = place_fogs()
 
 
 
-def place_devices(x1=-0.8, x2=0.8, y1=-0.6, y2=0.1, ins_low= 50, ins_high=2000 , size_low= 64, size_high=4096):
+def place_devices(x1=-0.8, x2=0.8, y1=-0.6, y2=0.1,tasks_low = 1, tasks_high = 100):
     positions ={}
     attributes = {}
     device_list = []
     for number in range (1,Edge_devices+1):
         positions = {"d" + str(number):(random.uniform(x1,x2),random.uniform(y1, y2))}
-        attributes = {"d" + str(number):{"mINS":random.randint(ins_low,ins_high),"Size":random.randint(size_low, size_high)}}
+        attributes = {"d" + str(number):{"Tasks":random.randint(tasks_low, tasks_high)}}
         device_list.append("d" + str(number))
         node_positions.update(positions)
         node_attrs.update(attributes)
@@ -68,8 +68,8 @@ def inRange_Clustering(candidate_list):
         for comb in itertools.combinations(candidate_list, fold):
             storage = 0
             for node in comb:
-                storage += G.nodes[node]["STR"]
-                if storage >= G.nodes[d]["Size"]:
+                storage += G.nodes[node]["RAM"]
+                if storage >= (G.nodes[d]["Tasks"] * 64):
                     cluster_list[comb] = storage
     if cluster_list != {}:
         minimum_comb = min(cluster_list, key = cluster_list.get)
@@ -81,7 +81,7 @@ def inRange_Clustering(candidate_list):
 def getMaxStorage(candidate_list):
     max_storage = 0
     for node in candidate_list:
-        max_storage += G.nodes[node]["STR"]   
+        max_storage += G.nodes[node]["RAM"]   
     return max_storage
 
 def fogNeighbour_Clustering(d, candidate_list):
@@ -108,7 +108,7 @@ def fogNeighbour_Clustering(d, candidate_list):
        
         neighbor_candidates.append(fog)
         for n in neighbour:
-            if (max_storage + G.nodes[n]["STR"]) >=  G.nodes[d]["Size"]:
+            if (max_storage + G.nodes[n]["RAM"]) >=  (G.nodes[d]["Tasks"] * 64):
                 G.add_edges_from([(fog, n)])
                 neighbor_candidates.append(n)
         
@@ -179,18 +179,18 @@ for d in G.nodes:
             found_fog = False
             for candidate in candidate_list:
 
-                if G.nodes[candidate]["STR"] >= G.nodes[d]["Size"]:
+                if G.nodes[candidate]["RAM"] >= (G.nodes[d]["Tasks"] * 64):
                     found_fog = True
-                    print(candidate +" STR:", G.nodes[candidate]["STR"], d + " Size:", G.nodes[d]["Size"], " Valid capacity")
+                    print(candidate +" RAM:", G.nodes[candidate]["RAM"], d + " Size:", (G.nodes[d]["Tasks"] * 64), " Valid capacity")
                     link_attributes = G.edges[str(candidate), str(d)]
                     DR = link_attributes['DR']
-                    ser_delay = G.nodes[d]["Size"]/DR
+                    ser_delay = (G.nodes[d]["Tasks"] * 64)/DR
                     for dis in fog_device_distances:
                         if candidate == dis[0] and d == dis[1]:
                             f_e_distance = dis[2]
                             prop_delay = f_e_distance/ medium_speed
                             network_latency = prop_delay + ser_delay
-                    processing_time = G.nodes[d]["mINS"] / G.nodes[candidate]["MIPS"]
+                    processing_time = (G.nodes[d]["Tasks"] * 2) / G.nodes[candidate]["MIPS"]
                     r_t = processing_time + network_latency
                     response_times[candidate] = r_t
                     print("response times for",d, ":", response_times) 
@@ -206,7 +206,6 @@ for d in G.nodes:
                         new_candidate_list = fogNeighbour_Clustering(d, candidate_list)
                         cluster_list, min_cluster = inRange_Clustering(new_candidate_list)
                         print("cluster list for", d, ":" , cluster_list)
-                        print(node_attrs)
                         print ("new minimum cluster", min_cluster)  
 
 
