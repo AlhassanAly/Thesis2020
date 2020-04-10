@@ -1,13 +1,17 @@
 import networkx as nx
 from networkx.algorithms import node_connectivity
-from binpacking import linear_programming_solver
+from binpacking import linear_programming_solver as LPS
+from heuristics import first_fit_algorithm as FFA
 import matplotlib.pyplot as plt
 import pylab
 import math
 import json   
 import random 
 import itertools
+#import timeit
+import time
 
+starttime = time.time()
 G = nx.Graph(name = "Cloud-Fog-Network")
 G.add_node("C")
 
@@ -15,13 +19,13 @@ medium_speed = 299792458  # speed of light
 fogs = 5
 fog_range = 0.4
 Edge_devices = 10
-task_size = random.randint(32,256)
-task_mINS = random.randint(1, 5)
 
+use_heuristics = False
 
 positions ={}
 attributes = {}
 fog_list = []
+
 
 for n in range (1,fogs+1):
     G.add_node("f" + str(n))
@@ -50,16 +54,19 @@ fnode_pos, fog_list, attributes = place_fogs()
 
 
 
-def place_devices(x1=-0.8, x2=0.8, y1=-0.8, y2=-0.1,tasks_low = 1, tasks_high = 100):
+def place_devices(x1=-0.8, x2=0.8, y1=-0.8, y2=-0.1,tasks_low = 1, tasks_high = 100, tsize_low = 32, tsize_high = 256, tmINS_low = 1, tmINS_high  = 5):
     positions ={}
     attributes = {}
     device_list = []
     for number in range (1,Edge_devices+1):
         positions = {"d" + str(number):(random.uniform(x1,x2),random.uniform(y1, y2))}
-        attributes = {"d" + str(number):{"Tasks":random.randint(tasks_low, tasks_high)}}
+        attributes = {"d" + str(number):{"Tasks":random.randint(tasks_low, tasks_high),
+        "Tsize":random.randint(tsize_low, tsize_high),
+        "TmINS":random.randint(tmINS_low, tmINS_high)}}
         device_list.append("d" + str(number))
         node_positions.update(positions)
         node_attrs.update(attributes)
+
     return node_positions, device_list, attributes
 
 
@@ -101,7 +108,7 @@ def Calculate_Response_Time(d, candidate1, candidate2, fog_device_distances, tas
         r_t = processing_time + network_latency
         return r_t
 
-def inRange_Clustering(candidate_list):
+def inRange_Clustering(candidate_list, use_heuristics = False):
 
     cluster_list ={}  
     min_cluster = {}
@@ -129,7 +136,12 @@ def inRange_Clustering(candidate_list):
                 fogs_ram.append(G.nodes[a]["RAM"]) 
                 cost.append(task_mINS/G.nodes[a]["MIPS"])
                 fog_names.append(a)
-    task_assignment = linear_programming_solver(task_list, task_count, fog_names,fogs_ram, cost)    
+
+    if not use_heuristics:
+        task_assignment = LPS(task_list, task_count, fog_names,fogs_ram, cost)
+    else:
+        fog_info = list(zip(fog_names,fogs_ram))
+        task_assignment =  FFA(task_list, fog_info, True)   
     return cluster_list, min_cluster, task_assignment
 
 
@@ -220,13 +232,18 @@ for elements in fog_device_distances:
 
 
 
-link_attrs = {}        
-def  add_link_attributes(data_rate_low = 1000, data_rate_high = 10000):
+        
+def  add_link_attributes(cloud_datarate_low = 100, cloud_datarate_high = 1000,f2d_data_rate_low = 1000, f2d_data_rate_high = 10000):
+    link_attrs = {}
     for link in list(G.edges):
-        link_attrs.update({link: {"DR": random.randint(data_rate_low, data_rate_high)}})
+        
+        if 'C' in link[0]:
+            link_attrs.update({link: {"DR": random.randint(cloud_datarate_low, cloud_datarate_high)}})
+        else:
+            link_attrs.update({link: {"DR": random.randint(f2d_data_rate_low, f2d_data_rate_high)}})
     return link_attrs
 
-add_link_attributes()
+link_attrs = add_link_attributes()
 nx.set_edge_attributes(G, link_attrs)
 
 candidate_list = []
@@ -246,6 +263,8 @@ def plotGraph():
 for d in G.nodes:
 
     if 'd' in d:
+        task_size = G.nodes[d]["Tsize"]
+        task_mINS = G.nodes[d]["TmINS"]
         candidate_list = list(G.adj[d])
         if candidate_list != []:
             print("candidate list for", d, ":", candidate_list)
@@ -264,12 +283,12 @@ for d in G.nodes:
 
             if response_times != {}:
                 minimum_RT = min(response_times, key = response_times.get)
-                time = response_times[minimum_RT]
-                print("Minimum response time for",d, ":", minimum_RT, time)
+                re_time = response_times[minimum_RT]
+                print("Minimum response time for",d, ":", minimum_RT, re_time)
             
             if not found_fog:
 
-                    cluster_list, min_cluster, task_assignment = inRange_Clustering(candidate_list)
+                    cluster_list, min_cluster, task_assignment = inRange_Clustering(candidate_list,use_heuristics = use_heuristics)
                     
                     if min_cluster != {}:
                         print ("minimum inrange cluster for", d, ':', min_cluster)
@@ -286,7 +305,7 @@ for d in G.nodes:
                     if cluster_list == {}:
                          
                         new_candidate_list, all_neighbours = fogNeighbour_Clustering(d, candidate_list)
-                        cluster_list, min_cluster, task_assignment = inRange_Clustering(new_candidate_list)
+                        cluster_list, min_cluster, task_assignment = inRange_Clustering(new_candidate_list, use_heuristics = use_heuristics)
                         if min_cluster != {}:
                             print ("minimum cluster with neighbors for", d, ":", min_cluster)  
                         for elem in task_assignment:
@@ -298,7 +317,7 @@ for d in G.nodes:
                                 for fog, neighbours in all_neighbours.items():
                                     if elem[1] in neighbours:
                                         O_G = fog
-                                        add_link_attributes()
+                                        link_attrs = add_link_attributes()
                                         nx.set_edge_attributes(G, link_attrs)
                                         r_t_cl2 = Calculate_Response_Time(d, O_G, elem[1], fog_device_distances, elem[0], task_size, task_mINS)
                                         response_times_cl2[elem[1]] = r_t_cl2
@@ -321,23 +340,24 @@ for d in G.nodes:
                 closest_candidate = min(f2d_distances, key = f2d_distances.get)       
                 print("App in", d, "is sent to Cloud through", closest_candidate)   
                 cloud_response_time = Calculate_Response_Time(d,closest_candidate,'C', fog_device_distances, G.nodes[d]["Tasks"],task_size, task_mINS)         
-                print("cloud_time", cloud_response_time)
+                print("cloud response time for", d, "through",closest_candidate, ":", cloud_response_time)
             
         else:
             G.add_edges_from([('C',d)])
-            add_link_attributes()
+            link_attrs = add_link_attributes()
             nx.set_edge_attributes(G, link_attrs)
 
             c2d_distance = calculateDistance(node_pos[d][0], node_pos[d][1],node_positions["C"][0],node_positions["C"][1])
             cloud_device_distance = [('C',d, c2d_distance )]
             cloud_direct_time = Calculate_Response_Time(d,'C', None, cloud_device_distance, G.nodes[d]["Tasks"],task_size, task_mINS)
 
-            print("App in", d, "is sent to Cloud with response time", cloud_direct_time)
+            print("App in", d, "is sent directly to Cloud with response time", cloud_direct_time)
 
  
 
-
-print("done")                    
+endtime = time.time()
+print(nx.info(G))
+print("Runtime:", endtime - starttime)                    
 # plotGraph()
 
 
