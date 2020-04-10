@@ -23,7 +23,7 @@ def storeResults(devices, response_times, methods, nodes, edges, runtime, optimi
     
     gap = ["", "", ""]
 
-    file = 'C:/Users/Hassan/Documents/MIRI/Final_Thesis/NetworkX/Results_'+suffix+'.csv'
+    file = 'C:/Users/Hassan/Documents/MIRI/Final_Thesis/NetworkX/outputs/Results_'+suffix+'.csv'
 
     parameters_value = [nodes, edges, runtime, optimizer]
 
@@ -51,7 +51,7 @@ def storeResults(devices, response_times, methods, nodes, edges, runtime, optimi
 def getAverageResponse(info, method):
   method_entry = []
   avg = 0
-  
+
   for i in info:
     if i[1] == method: 
       method_entry.append(i[0])
