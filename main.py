@@ -10,6 +10,8 @@ import random
 import itertools
 #import timeit
 import time
+from output import storeResults
+
 
 starttime = time.time()
 G = nx.Graph(name = "Cloud-Fog-Network")
@@ -21,6 +23,12 @@ fog_range = 0.4
 Edge_devices = 10
 
 use_heuristics = False
+suffix = "5fog-10device-ILP"
+
+if use_heuristics:
+    optimizer = "First Fit heuristic"
+else:
+    optimizer = "Integer Linear Programming"    
 
 positions ={}
 attributes = {}
@@ -260,9 +268,16 @@ def plotGraph():
 
    plt.show()
 
+
+devices_list = []
+resp_times_list = []
+methods_list = []
+
+
 for d in G.nodes:
 
     if 'd' in d:
+        devices_list.append(d)
         task_size = G.nodes[d]["Tsize"]
         task_mINS = G.nodes[d]["TmINS"]
         candidate_list = list(G.adj[d])
@@ -279,12 +294,15 @@ for d in G.nodes:
                 if G.nodes[candidate]["RAM"] >= (G.nodes[d]["Tasks"] * task_size):
                     r_t = Calculate_Response_Time(d, candidate,None, fog_device_distances,G.nodes[d]["Tasks"], task_size,task_mINS)
                     response_times[candidate] = r_t
+                    
                     found_fog = True
 
             if response_times != {}:
                 minimum_RT = min(response_times, key = response_times.get)
                 re_time = response_times[minimum_RT]
                 print("Minimum response time for",d, ":", minimum_RT, re_time)
+                resp_times_list.append(re_time)
+                methods_list.append("single fog")
             
             if not found_fog:
 
@@ -297,11 +315,16 @@ for d in G.nodes:
                         print(elem[0], "tasks in", elem[1]) 
                         r_t_c = Calculate_Response_Time(d, elem[1], None, fog_device_distances,elem[0], task_size,task_mINS)
                         response_times_cl1[elem[1]] = r_t_c
+                        
 
                     if  response_times_cl1 != {}:   
                         total_rt = max(response_times_cl1, key = response_times_cl1.get)
                         total_time = response_times_cl1[total_rt] 
                         print("Total inrange cluster response time for",d, ":", total_rt, total_time)
+                        resp_times_list.append(total_time)
+                        methods_list.append("Inrange cluster")
+
+
                     if cluster_list == {}:
                          
                         new_candidate_list, all_neighbours = fogNeighbour_Clustering(d, candidate_list)
@@ -326,6 +349,8 @@ for d in G.nodes:
                         total_rtn = max(response_times_cl2, key = response_times_cl2.get)
                         total_time_n = response_times_cl2[total_rtn] 
                         print("Total neighbor cluster response time for",d, ":", total_rtn, total_time_n)
+                        resp_times_list.append(total_time_n)
+                        methods_list.append("Neighbor cluuster")
                     else: 
                         send_to_cloud = True 
 
@@ -341,7 +366,8 @@ for d in G.nodes:
                 print("App in", d, "is sent to Cloud through", closest_candidate)   
                 cloud_response_time = Calculate_Response_Time(d,closest_candidate,'C', fog_device_distances, G.nodes[d]["Tasks"],task_size, task_mINS)         
                 print("cloud response time for", d, "through",closest_candidate, ":", cloud_response_time)
-            
+                resp_times_list.append(cloud_response_time)
+                methods_list.append("Cloud through fog")
         else:
             G.add_edges_from([('C',d)])
             link_attrs = add_link_attributes()
@@ -352,12 +378,19 @@ for d in G.nodes:
             cloud_direct_time = Calculate_Response_Time(d,'C', None, cloud_device_distance, G.nodes[d]["Tasks"],task_size, task_mINS)
 
             print("App in", d, "is sent directly to Cloud with response time", cloud_direct_time)
-
+            resp_times_list.append(cloud_direct_time)
+            methods_list.append("Cloud direct")
  
 
 endtime = time.time()
+Total_number_of_nodes = G.number_of_nodes()
+Total_number_of_edges = G.number_of_edges()
+
 print(nx.info(G))
-print("Runtime:", endtime - starttime)                    
+runtime = endtime - starttime
+print("Runtime:", runtime)
+storeResults(devices_list, resp_times_list, methods_list, Total_number_of_nodes, Total_number_of_edges, runtime, optimizer, suffix)
+
 # plotGraph()
 
 
