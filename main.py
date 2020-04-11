@@ -183,13 +183,13 @@ def  add_link_attributes(cloud_datarate_low = 100, cloud_datarate_high = 1000,f2
 
 def plotGraph():
    nx.draw(G, pos = node_positions, nodelist = ["C"],
-   node_size = 2000, alpha = 0.3, node_color = "r", with_labels=True, font_size = 9)
+   node_size = 2000, alpha = 0.3, node_color = "r", with_labels=True, font_size = 9, width =0.2)
 
    nx.draw(G, pos = fnode_pos , nodelist = fog_list, 
-   node_size = 600, alpha = 0.2, node_color = "b", with_labels=True, font_size = 9)
+   node_size = 600, alpha = 0.2, node_color = "b", with_labels=True, font_size = 9, width = 0.2)
 
    nx.draw(G, pos = node_pos, nodelist = device_list,
-   node_size = 150, alpha = 0.5, node_color = "g", with_labels=True, font_size = 9)
+   node_size = 200, alpha = 0.3, node_color = "g", with_labels=True, font_size = 7, width = 0.2)
 
    plt.show()
 
@@ -226,7 +226,7 @@ for i in range(0, iterations):
         G.add_node("d" + str(n))
 
     node_positions = {"C":(0,1)}
-    node_attrs = {"C":{"MIPS": 2000, "RAM": 500000}}
+    node_attrs = {"C":{"MIPS": 2000, "RAM": 64000}}
 
 
 
@@ -414,7 +414,7 @@ for i in range(0, iterations):
     print("Runtime:", runtime)
     storeResults(devices_list, resp_times_list, methods_list, Total_number_of_nodes, Total_number_of_edges, runtime, optimizer, suffix)
 
-# plotGraph()
+plotGraph()
 avg_runtime = statistics.mean(final_runtime)
 average = getFileAverage()
 final_avg = getAverage(average)
