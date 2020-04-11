@@ -3,6 +3,10 @@ import os
 import csv
 import collections
 import statistics
+from Parameters import Edge_devices
+
+d_num = (Edge_devices * 2 )+ 24
+print("sup nigg",d_num)
 
 def getFileAverage():
 
@@ -16,7 +20,7 @@ def getFileAverage():
             filename = file_path + file
             with open(filename, 'rU') as f:
                 reader = csv.reader(f)
-                data = pd.read_csv(filename, skiprows = 44)
+                data = pd.read_csv(filename, skiprows = d_num)
                 for col in data.columns: 
                     for m in methods_list:
                         if m == col:

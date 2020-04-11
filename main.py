@@ -10,8 +10,9 @@ import random
 import itertools
 #import timeit
 import time
+from Parameters import iterations, final_runtime, medium_speed, fogs, fog_range, Edge_devices, use_heuristics
 from output import storeResults
-import Iterations as evaluate
+from Iterations import getAverage, getFileAverage
 import statistics
 
 #functions
@@ -192,27 +193,27 @@ def plotGraph():
 
    plt.show()
 
-iterations = 4
-final_runtime = []
+
+
+
+
 
 for i in range(0, iterations): 
     starttime = time.time()
     G = nx.Graph(name = "Cloud-Fog-Network")
     G.add_node("C")
 
-    medium_speed = 299792458  # speed of light
-    fogs = 5
-    fog_range = 0.4
-    Edge_devices = 10
-
-    use_heuristics = False
-    suffix = "5fog-10device-ILP" + '_' + str(i)
+    
+    
 
     if use_heuristics:
         optimizer = "First Fit heuristic"
+        filename = "FFA" 
     else:
         optimizer = "Integer Linear Programming"    
+        filename = "ILP"
 
+    suffix = str(fogs) + "fogs-" + str(Edge_devices) + "devices-" + str(filename) + '_' + str(i)
     positions ={}
     attributes = {}
     fog_list = []
@@ -415,7 +416,15 @@ for i in range(0, iterations):
 
 # plotGraph()
 avg_runtime = statistics.mean(final_runtime)
-average = evaluate.getFileAverage()
-final_avg = evaluate.getAverage(average)
+average = getFileAverage()
+final_avg = getAverage(average)
+
 print("avg runtime", avg_runtime)
 print (final_avg)
+
+file = "C:/Users/Hassan/Documents/MIRI/Final_Thesis/NetworkX/test_results.txt" 
+
+with open(file, 'w') as f:
+    f.writelines("runtime = " + str(avg_runtime) + '\n')
+    f.writelines(str(final_avg))
+
