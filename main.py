@@ -4,24 +4,25 @@ from binpacking import linear_programming_solver as LPS
 from heuristics import first_fit_algorithm as FFA
 import matplotlib.pyplot as plt
 import pylab
+import numpy as np
 import math
 import json   
 import random 
 import itertools
 #import timeit
 import time
-from Parameters import iterations, final_runtime, medium_speed, fogs, fog_range, Edge_devices, use_heuristics
+from Parameters import iterations, final_runtime, medium_speed, fogs, Edge_devices, use_heuristics
 from output import storeResults
 from Iterations import getAverage, getFileAverage
 import statistics
 
 #functions
 
-def place_fogs(x1 = -0.7,x2 = 0.7 ,y1 = -0.5, y2 = 0.2, mips_low = 200, mips_high=900, 
-ram_low = 512, ram_high = 4096):
+def place_fogs(x1 = -0.5 ,x2 = 0.5 ,y1 = -3, y2 = -2, mips_low = 200, mips_high=900, 
+ram_low = 512, ram_high = 4096, range_low = 500, range_high = 2500):
     for number in range (1,fogs+1):
         positions = {"f" + str(number):(random.uniform(x1,x2),random.uniform(y1, y2))}
-        attributes = {"f" + str(number):{"MIPS":random.randint(mips_low,mips_high),"RAM":random.randint(ram_low, ram_high)}}
+        attributes = {"f" + str(number):{"MIPS":random.randint(mips_low,mips_high),"RAM":random.randint(ram_low, ram_high),"Range":random.randint(range_low, range_high)}}
         fog_list.append("f" + str(number))
         node_positions.update(positions)
         node_attrs.update(attributes)
@@ -30,7 +31,7 @@ ram_low = 512, ram_high = 4096):
 
     return node_positions, fog_list, attributes
 
-def place_devices(x1=-0.8, x2=0.8, y1=-0.8, y2=-0.1,tasks_low = 1, tasks_high = 100, tsize_low = 32, tsize_high = 256, tmINS_low = 1, tmINS_high  = 5):
+def place_devices(x1=-0.5, x2=0.5, y1=-3.2, y2=-2.3,tasks_low = 1, tasks_high = 100, tsize_low = 32, tsize_high = 256, tmINS_low = 1, tmINS_high  = 5):
     positions ={}
     attributes = {}
     device_list = []
@@ -143,7 +144,7 @@ def fogNeighbour_Clustering(d, candidate_list):
                 fog_position = fnode_pos[fog]
                 global_fog_position = fnode_pos[global_fog]
                 dist = calculateDistance(fog_position[0], fog_position[1], global_fog_position[0], global_fog_position[1])
-                if dist < fog_range:
+                if dist < G.nodes[fog]["Range"]:
                     neighbour_list.append(global_fog)
                       
         all_neighbours[fog] = neighbour_list
@@ -166,11 +167,11 @@ def fogNeighbour_Clustering(d, candidate_list):
 
 
 def calculateDistance(x1,y1,x2,y2):  
-     dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)  
+     dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2) * 3779.5275591 
      return dist
 
 
-def  add_link_attributes(cloud_datarate_low = 100, cloud_datarate_high = 1000,f2d_data_rate_low = 1000, f2d_data_rate_high = 10000):
+def  add_link_attributes(cloud_datarate_low = 100, cloud_datarate_high = 1000, f2d_data_rate_low = 1000, f2d_data_rate_high = 10000):
     link_attrs = {}
     for link in list(G.edges):
         
@@ -190,8 +191,8 @@ def plotGraph():
 
    nx.draw(G, pos = node_pos, nodelist = device_list,
    node_size = 200, alpha = 0.3, node_color = "g", with_labels=True, font_size = 7, width = 0.2)
-
    plt.show()
+   
 
 
 
@@ -275,7 +276,7 @@ for i in range(0, iterations):
 
 
     for elements in fog_device_distances:
-        if(elements[2] < fog_range):
+        if(elements[2] < G.nodes[elements[0]]['Range']):
             G.add_edges_from([(elements[0], elements[1])])
 
 
@@ -414,14 +415,14 @@ for i in range(0, iterations):
     print("Runtime:", runtime)
     storeResults(devices_list, resp_times_list, methods_list, Total_number_of_nodes, Total_number_of_edges, runtime, optimizer, suffix)
 
-plotGraph()
+
 avg_runtime = statistics.mean(final_runtime)
 average = getFileAverage()
 final_avg = getAverage(average)
 
 print("avg runtime", avg_runtime)
 print (final_avg)
-
+plotGraph()
 file = "C:/Users/Hassan/Documents/MIRI/Final_Thesis/NetworkX/test_results.txt" 
 
 with open(file, 'w') as f:
