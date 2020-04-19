@@ -3,13 +3,9 @@ from networkx.algorithms import node_connectivity
 from binpacking import linear_programming_solver as LPS
 from heuristics import first_fit_algorithm as FFA
 import matplotlib.pyplot as plt
-import pylab
-import numpy as np
-import math
-import json   
+import math  
 import random 
 import itertools
-#import timeit
 import time
 from Parameters import iterations, final_runtime, medium_speed, fogs, Edge_devices, use_heuristics
 from output import storeResults
@@ -196,7 +192,8 @@ def plotGraph():
 
 
 
-
+instance_avg_fogs_inrange_cluster = []
+instance_avg_fogs_neighbor_cluster = []
 
 
 for i in range(0, iterations): 
@@ -295,7 +292,8 @@ for i in range(0, iterations):
     devices_list = []
     resp_times_list = []
     methods_list = []
-
+    inrange_cluster_num_fogs = []
+    neighbor_cluster_num_fogs = []
 
     for d in G.nodes:
 
@@ -333,6 +331,8 @@ for i in range(0, iterations):
                         
                         if min_cluster != {}:
                             print ("minimum inrange cluster for", d, ':', min_cluster)
+    
+                            inrange_cluster_num_fogs.append(sum(len(f) for f in min_cluster.keys()))
 
                         for elem in task_assignment:
                             print(elem[0], "tasks in", elem[1]) 
@@ -346,14 +346,17 @@ for i in range(0, iterations):
                             print("Total inrange cluster response time for",d, ":", total_rt, total_time)
                             resp_times_list.append(total_time)
                             methods_list.append("Inrange cluster")
-
+                        
 
                         if cluster_list == {}:
                             
                             new_candidate_list, all_neighbours = fogNeighbour_Clustering(d, candidate_list)
                             cluster_list, min_cluster, task_assignment = inRange_Clustering(new_candidate_list, use_heuristics = use_heuristics)
                             if min_cluster != {}:
-                                print ("minimum cluster with neighbors for", d, ":", min_cluster)  
+                                print ("minimum cluster with neighbors for", d, ":", min_cluster)
+
+                                neighbor_cluster_num_fogs.append(sum(len(f) for f in min_cluster.keys()))
+
                             for elem in task_assignment:
                                 print("neighbor assignment:",elem[0], "tasks in", elem[1])
                                 if elem[1] in candidate_list:
@@ -409,7 +412,17 @@ for i in range(0, iterations):
     Total_number_of_nodes = G.number_of_nodes()
     Total_number_of_edges = G.number_of_edges()
 
+    
+    avg_fogs_inrange_cluster = statistics.mean(inrange_cluster_num_fogs)
+    instance_avg_fogs_inrange_cluster.append(avg_fogs_inrange_cluster)
+
+    avg_fogs_neighbor_cluster = statistics.mean(neighbor_cluster_num_fogs)
+    instance_avg_fogs_neighbor_cluster.append(avg_fogs_neighbor_cluster)
+    
     print(nx.info(G))
+    print("avg fogs inrange cluster", instance_avg_fogs_inrange_cluster)
+    print("avg fogs neighbor cluster", instance_avg_fogs_neighbor_cluster)
+
     runtime =  endtime - starttime
     final_runtime.append(runtime)
     print("Runtime:", runtime)
@@ -417,15 +430,28 @@ for i in range(0, iterations):
 
 
 avg_runtime = statistics.mean(final_runtime)
+runtime_deviation = statistics.stdev(final_runtime)
 average = getFileAverage()
-final_avg = getAverage(average)
+final_avg, responsetime_deviation  = getAverage(average)
+total_avg_fogs_inrange_cluster = statistics.mean(instance_avg_fogs_inrange_cluster)
+total_avg_fogs_neighbor_cluster = statistics.mean(instance_avg_fogs_neighbor_cluster)
 
-print("avg runtime", avg_runtime)
-print (final_avg)
-plotGraph()
+print("average runtime:", avg_runtime)
+print("runtime_deviation:", runtime_deviation)
+print ("response times averages:", final_avg)
+print("response times deviation:", responsetime_deviation)
+print("total average fogs inrange cluster", total_avg_fogs_inrange_cluster)
+print("total average fogs neighbor cluster", total_avg_fogs_neighbor_cluster)
+
+#plotGraph()
+
 file = "C:/Users/Hassan/Documents/MIRI/Final_Thesis/NetworkX/test_results.txt" 
 
 with open(file, 'w') as f:
-    f.writelines("runtime = " + str(avg_runtime) + '\n')
-    f.writelines(str(final_avg))
+    f.writelines("average runtime = " + str(avg_runtime) + '\n')
+    f.writelines("runtimes STD = " + str(runtime_deviation) + '\n')
+    f.writelines("average response times = " + str(final_avg) + '\n')
+    f.writelines("response times STD = " + str(responsetime_deviation) + '\n')
+    f.writelines("total average fogs inrange cluster = " + str(total_avg_fogs_inrange_cluster) + '\n')
+    f.writelines("total average fogs neighbor cluster = " + str(total_avg_fogs_neighbor_cluster) + '\n')
 

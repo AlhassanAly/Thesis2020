@@ -33,3 +33,4 @@ def first_fit_algorithm(sizes, bins, return_sizes=None):
         fog_task.append((len(assigned_task), b[0]))
 
     return fog_task
+

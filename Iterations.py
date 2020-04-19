@@ -6,7 +6,7 @@ import statistics
 from Parameters import Edge_devices
 
 d_num = (Edge_devices * 2 )+ 24
-print("sup nigg",d_num)
+
 
 def getFileAverage():
 
@@ -30,11 +30,12 @@ def getFileAverage():
                 
 def getAverage(avg_dict):
     final_avg = {}
+    res_time_deviation = {}
     for method,resp_times in avg_dict.items():
         if resp_times != []:
            final_avg[method]= statistics.mean(resp_times)
-    
-    return final_avg
+           res_time_deviation[method] = statistics.stdev(resp_times)
+    return final_avg, res_time_deviation
 
 if __name__ == '__main__':
     average = getFileAverage()
